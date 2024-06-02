@@ -1,0 +1,85 @@
+<head>
+  <title>transformers.js</title>
+</head>
+
+<body>
+  <h1>Hello, world</h1>
+
+  <p>Character count: 0</p>
+  <textarea id="textarea" placeholder="original text"></textarea>
+  <textarea id="sim" placeholder="text to compare"></textarea>
+  <out id="out"></out>
+  <button id="button">Vectorize</button>
+
+  <script type="module">
+    import {
+      pipeline,
+      env,
+    } from "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2";
+    import * as wavefile from "https://cdn.jsdelivr.net/npm/wavefile@11.0.0/+esm";
+
+    env.allowLocalModels = false;
+
+    const textareaElement = document.getElementById("textarea");
+    const buttonElement = document.getElementById("button");
+    const outElement = document.getElementById("out");
+    const simElement = document.getElementById("sim");
+
+    textareaElement.addEventListener("input", () => {
+      const text = textareaElement.value;
+      const characterCount = text.length;
+      document.querySelector("p").innerText =
+        `Character count: ${characterCount}`;
+    });
+
+    const extractor = await pipeline(
+      "feature-extraction",
+      "Xenova/all-MiniLM-L6-v2",
+      { progress_callback: console.log },
+    );
+
+    buttonElement.addEventListener("click", async () => {
+      await measure("Pipeline", async () => {
+        const text = textareaElement.value;
+        const output = await extractor(text, {
+          pooling: "mean",
+          normalize: true,
+        });
+        outElement.innerHTML = JSON.stringify(output.tolist(), null, 2);
+        console.log(output.tolist().length);
+
+        const outputSim = await extractor(simElement.value, {
+          pooling: "mean",
+          normalize: true,
+        });
+        const similarity = cosinesim(output.tolist()[0], outputSim.tolist()[0]);
+        outElement.innerHTML += `<br>Similarity: ${similarity}`;
+      });
+    });
+
+    async function measure(msg, callback) {
+      console.log(msg);
+      const now = performance.now();
+      await callback();
+      console.log(`Time taken: ${performance.now() - now}ms`);
+    }
+
+    function cosinesim(A, B) {
+      if (A.length !== B.length) {
+        throw new Error("Vectors have different lengths");
+      }
+      let dotproduct = 0;
+      let mA = 0;
+      let mB = 0;
+      for (let i = 0; i < A.length; i++) {
+        dotproduct += A[i] * B[i];
+        mA += A[i] * A[i];
+        mB += B[i] * B[i];
+      }
+      mA = Math.sqrt(mA);
+      mB = Math.sqrt(mB);
+      const similarity = (dotproduct / mA) * mB;
+      return similarity;
+    }
+  </script>
+</body>
