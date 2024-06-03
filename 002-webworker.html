@@ -45,7 +45,7 @@
       console.log(`Time taken: ${performance.now() - now}ms`);
     }
 
-    function cosinesim(A, B) {
+    globalThis.cosinesim = function cosinesim(A, B) {
       if (A.length !== B.length) {
         throw new Error("Vectors have different lengths");
       }
@@ -61,6 +61,6 @@
       mB = Math.sqrt(mB);
       const similarity = (dotproduct / mA) * mB;
       return similarity;
-    }
+    };
   </script>
 </body>

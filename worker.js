@@ -17,7 +17,9 @@ self.onmessage = async (event) => {
   // event.data can be a single text, or an array of text.
   const output = await extractor(event.data, {
     pooling: "mean",
-    normalize: true,
+    // normalize_embeddings (bool, optional) – Whether to normalize returned vectors to have length 1. In that case, the faster dot-product (util.dot_score) instead of cosine similarity can be used. Defaults to False.
+    // https://www.sbert.net/docs/package_reference/sentence_transformer/SentenceTransformer.html#id1
+    normalize: false,
   });
   self.postMessage(output.tolist());
 };
