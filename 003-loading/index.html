@@ -1,0 +1,58 @@
+<head>
+  <title>transformers.js</title>
+</head>
+
+<body>
+  <h1>Hello, world</h1>
+
+  <textarea id="textarea" placeholder="Enter your text here"></textarea>
+  <out id="out"></out>
+  <label for="file">Downloading progress:</label>
+  <progress id="file" value="" max=""></progress>
+  <p id="p"></p>
+
+  <script type="module">
+    const textareaElement = document.getElementById("textarea");
+    const outElement = document.getElementById("out");
+    const fileElement = document.getElementById("file");
+    const pElement = document.getElementById("p");
+
+    const worker = new Worker("./worker.js", { type: "module" });
+    worker.onmessage = (event) => {
+      // console.log("received:", event.data);
+      const { data } = event;
+      switch (data.status) {
+        case "progress":
+          const { progress, total, loaded, file } = data;
+          fileElement.value = loaded;
+          fileElement.max = total;
+          p.innerHTML = file;
+          break;
+        case "ready":
+          const { task, model } = data;
+          p.innerHTML = `Model ${model} is ready for ${task}`;
+          break;
+        case "done": {
+          // {status: 'done', name: 'Xenova/robertuito-sentiment-analysis', file: 'onnx/model_quantized.onnx'}
+          const { name, file } = data;
+          p.innerHTML = `file: ${file}, model: ${name}`;
+          fileElement.value = 100;
+          fileElement.max = 100;
+          break;
+        }
+        case "success":
+          const { time, output } = data;
+          // [ { "label": "NEU", "score": 0.503276526927948 } ]
+          console.log("success", data, output[0]);
+          out.innerHTML = `Time taken: ${performance.now() - time}ms\n${JSON.stringify(output[0], null, 2)}`;
+          break;
+      }
+    };
+
+    textareaElement.addEventListener("input", () => {
+      const text = textareaElement.value;
+      console.log("sending:", text);
+      worker.postMessage({ text, time: performance.now() });
+    });
+  </script>
+</body>
