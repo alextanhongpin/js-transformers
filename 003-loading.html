@@ -1,0 +1,66 @@
+<head>
+  <title>transformers.js</title>
+</head>
+
+<body>
+  <h1>Hello, world</h1>
+
+  <p>Character count: 0</p>
+  <textarea id="textarea" placeholder="original text"></textarea>
+  <textarea id="sim" placeholder="text to compare"></textarea>
+  <out id="out"></out>
+  <button id="button">Vectorize</button>
+
+  <script type="module">
+    const textareaElement = document.getElementById("textarea");
+    const buttonElement = document.getElementById("button");
+    const outElement = document.getElementById("out");
+    const simElement = document.getElementById("sim");
+
+    const worker = new Worker("./worker.js", { type: "module" });
+    worker.onmessage = (event) => {
+      console.log("child", event);
+      outElement.innerHTML = JSON.stringify(event.data, null, 2);
+      const similarity = cosinesim(event.data[0], event.data[1]);
+      outElement.innerHTML += `<br>Similarity: ${similarity}`;
+    };
+
+    textareaElement.addEventListener("input", () => {
+      const text = textareaElement.value;
+      const characterCount = text.length;
+      document.querySelector("p").innerText =
+        `Character count: ${characterCount}`;
+    });
+
+    buttonElement.addEventListener("click", async () => {
+      await measure("Pipeline", async () => {
+        worker.postMessage([textareaElement.value, simElement.value]);
+      });
+    });
+
+    async function measure(msg, callback) {
+      console.log(msg);
+      const now = performance.now();
+      await callback();
+      console.log(`Time taken: ${performance.now() - now}ms`);
+    }
+
+    globalThis.cosinesim = function cosinesim(A, B) {
+      if (A.length !== B.length) {
+        throw new Error("Vectors have different lengths");
+      }
+      let dotproduct = 0;
+      let mA = 0;
+      let mB = 0;
+      for (let i = 0; i < A.length; i++) {
+        dotproduct += A[i] * B[i];
+        mA += A[i] * A[i];
+        mB += B[i] * B[i];
+      }
+      mA = Math.sqrt(mA);
+      mB = Math.sqrt(mB);
+      const similarity = (dotproduct / mA) * mB;
+      return similarity;
+    };
+  </script>
+</body>

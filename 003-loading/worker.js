@@ -8,6 +8,7 @@ import {
 env.allowLocalModels = false;
 
 const models = {};
+
 function load(task, model, progress_callback) {
   const key = `${task}:${model}`;
   if (models[key]) {
