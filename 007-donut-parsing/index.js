@@ -2,7 +2,6 @@ const Model = {
   worker: new Worker("./worker.js", { type: "module" }),
   state: {
     image: null,
-    start: null,
   },
   setState(state) {
     this.state = {
@@ -10,26 +9,12 @@ const Model = {
       ...state,
     };
   },
-
   delay(duration = 250) {
     return new Promise((resolve) => setTimeout(resolve, duration));
-  },
-
-  record() {
-    this.setState({
-      start: performance.now(),
-    });
-  },
-
-  duration() {
-    const delta = performance.now() - this.state.start;
-    const seconds = Math.ceil(delta / 1000);
-    return `${seconds} seconds`;
   },
 };
 
 const View = {
-  textarea: document.getElementById("textarea"),
   out: document.getElementById("out"),
   file: document.getElementById("file"),
   button: document.getElementById("button"),
@@ -37,6 +22,11 @@ const View = {
 
   render(text) {
     this.out.innerText = text;
+  },
+
+  disableButton(disabled) {
+    this.button.innerText = disabled ? "Loading..." : "Submit";
+    this.button.disabled = disabled;
   },
 
   canvasAsObjectURL() {
@@ -51,6 +41,8 @@ const View = {
     // Support HiDPI-screens.
     const outputScale = window.devicePixelRatio || 1;
 
+    // This does not work, you need to render the canvas to get the content.
+    //const canvas = document.createElement("canvas");
     const canvas = this.canvas;
     const context = canvas.getContext("2d");
 
@@ -70,11 +62,11 @@ const View = {
     await page.render(renderContext);
     //return context.getImageData(0, 0, canvas.width, canvas.height);
     //return canvas.toDataURL();
-  },
-
-  disableButton(disabled) {
-    this.button.innerText = disabled ? "Loading..." : "Submit";
-    this.button.disabled = disabled;
+    //return new Promise((resolve) =>
+    //document
+    //.getElementById("canvas")
+    //.toBlob((blob) => resolve(URL.createObjectURL(blob))),
+    //);
   },
 };
 
@@ -89,10 +81,7 @@ const Controller = {
           View.render(error);
           return;
         case "success":
-          let display = JSON.stringify(output, null, 2);
-          display += "\n";
-          display += Model.duration();
-          View.render(display);
+          View.render(JSON.stringify(output, null, 2));
           break;
       }
     };
@@ -105,17 +94,9 @@ const Controller = {
         return;
       }
 
-      const question = View.textarea.value;
-      if (!question) {
-        alert("Please enter a question");
-        return;
-      }
-
-      const input = { image, question };
-      console.log("sending", input);
+      console.log("sending", image);
       View.disableButton(true);
-      Model.record();
-      Model.worker.postMessage(input);
+      Model.worker.postMessage(image);
     });
   },
   bindFile() {
